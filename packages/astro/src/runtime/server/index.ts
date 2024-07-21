@@ -1,33 +1,36 @@
+// NOTE: Although this entrypoint is exported, it is internal API and may change at any time.
+
 export { createComponent } from './astro-component.js';
 export { createAstro } from './astro-global.js';
 export { renderEndpoint } from './endpoint.js';
-export { escapeHTML, HTMLBytes, HTMLString, markHTMLString, unescapeHTML } from './escape.js';
+export {
+	escapeHTML,
+	HTMLBytes,
+	HTMLString,
+	isHTMLString,
+	markHTMLString,
+	unescapeHTML,
+} from './escape.js';
 export { renderJSX } from './jsx.js';
 export {
 	addAttribute,
-	addScopeFlag,
 	createHeadAndContent,
-	createScopedResult,
 	defineScriptVars,
 	Fragment,
 	maybeRenderHead,
-	removeScopeFlag,
-	renderAstroTemplateResult as renderAstroComponent,
+	renderTemplate as render,
 	renderComponent,
-	renderComponentToIterable,
 	Renderer as Renderer,
 	renderHead,
 	renderHTMLElement,
 	renderPage,
+	renderScript,
 	renderScriptElement,
 	renderSlot,
-	renderStyleElement,
-	renderTemplate as render,
+	renderSlotToString,
 	renderTemplate,
 	renderToString,
 	renderUniqueStylesheet,
-	ScopeFlags,
-	stringifyChunk,
 	voidElementNames,
 } from './render/index.js';
 export type {
@@ -36,9 +39,10 @@ export type {
 	ComponentSlots,
 	RenderInstruction,
 } from './render/index.js';
+export { createTransitionScope, renderTransition } from './transition.js';
 
 import { markHTMLString } from './escape.js';
-import { addAttribute, Renderer } from './render/index.js';
+import { Renderer, addAttribute } from './render/index.js';
 
 export function mergeSlots(...slotted: unknown[]) {
 	const slots: Record<string, () => any> = {};
@@ -66,7 +70,7 @@ export function __astro_tag_component__(Component: unknown, rendererName: string
 
 // Adds support for `<Component {...value} />
 export function spreadAttributes(
-	values: Record<any, any>,
+	values: Record<any, any> = {},
 	_name?: string,
 	{ class: scopedClassName }: { class?: string } = {}
 ) {

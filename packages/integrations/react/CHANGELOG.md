@@ -1,5 +1,440 @@
 # @astrojs/react
 
+## 3.6.0
+
+### Minor Changes
+
+- [#11234](https://github.com/withastro/astro/pull/11234) [`4385bf7`](https://github.com/withastro/astro/commit/4385bf7a4dc9c65bff53a30c660f7a909fcabfc9) Thanks [@ematipico](https://github.com/ematipico)! - Adds a new function called `addServerRenderer` to the Container API. Use this function to manually store renderers inside the instance of your container.
+
+  This new function should be preferred when using the Container API in environments like on-demand pages:
+
+  ```ts
+  import type { APIRoute } from 'astro';
+  import { experimental_AstroContainer } from 'astro/container';
+  import reactRenderer from '@astrojs/react/server.js';
+  import vueRenderer from '@astrojs/vue/server.js';
+  import ReactComponent from '../components/button.jsx';
+  import VueComponent from '../components/button.vue';
+
+  // MDX runtime is contained inside the Astro core
+  import mdxRenderer from 'astro/jsx/server.js';
+
+  // In case you need to import a custom renderer
+  import customRenderer from '../renderers/customRenderer.js';
+
+  export const GET: APIRoute = async (ctx) => {
+    const container = await experimental_AstroContainer.create();
+    container.addServerRenderer({ renderer: reactRenderer });
+    container.addServerRenderer({ renderer: vueRenderer });
+    container.addServerRenderer({ renderer: customRenderer });
+    // You can pass a custom name too
+    container.addServerRenderer({
+      name: 'customRenderer',
+      renderer: customRenderer,
+    });
+    const vueComponent = await container.renderToString(VueComponent);
+    return await container.renderToResponse(Component);
+  };
+  ```
+
+## 3.5.0
+
+### Minor Changes
+
+- [#11144](https://github.com/withastro/astro/pull/11144) [`803dd80`](https://github.com/withastro/astro/commit/803dd8061df02138b4928442bcb76e77dcf6f5e7) Thanks [@ematipico](https://github.com/ematipico)! - The integration now exposes a function called `getContainerRenderer`, that can be used inside the Container APIs to load the relative renderer.
+
+  ```js
+  import { experimental_AstroContainer as AstroContainer } from 'astro/container';
+  import ReactWrapper from '../src/components/ReactWrapper.astro';
+  import { loadRenderers } from 'astro:container';
+  import { getContainerRenderer } from '@astrojs/react';
+
+  test('ReactWrapper with react renderer', async () => {
+    const renderers = await loadRenderers([getContainerRenderer()]);
+    const container = await AstroContainer.create({
+      renderers,
+    });
+    const result = await container.renderToString(ReactWrapper);
+
+    expect(result).toContain('Counter');
+    expect(result).toContain('Count: <!-- -->5');
+  });
+  ```
+
+## 3.4.0
+
+### Minor Changes
+
+- [#11071](https://github.com/withastro/astro/pull/11071) [`8ca7c73`](https://github.com/withastro/astro/commit/8ca7c731dea894e77f84b314ebe3a141d5daa918) Thanks [@bholmesdev](https://github.com/bholmesdev)! - Adds two new functions `experimental_getActionState()` and `experimental_withState()` to support [the React 19 `useActionState()` hook](https://react.dev/reference/react/useActionState) when using Astro Actions. This introduces progressive enhancement when calling an Action with the `withState()` utility.
+
+  This example calls a `like` action that accepts a `postId` and returns the number of likes. Pass this action to the `experimental_withState()` function to apply progressive enhancement info, and apply to `useActionState()` to track the result:
+
+  ```tsx
+  import { actions } from 'astro:actions';
+  import { experimental_withState } from '@astrojs/react/actions';
+
+  export function Like({ postId }: { postId: string }) {
+    const [state, action, pending] = useActionState(
+      experimental_withState(actions.like),
+      0 // initial likes
+    );
+
+    return (
+      <form action={action}>
+        <input type="hidden" name="postId" value={postId} />
+        <button disabled={pending}>{state} ❤️</button>
+      </form>
+    );
+  }
+  ```
+
+  You can also access the state stored by `useActionState()` from your action `handler`. Call `experimental_getActionState()` with the API context, and optionally apply a type to the result:
+
+  ```ts
+  import { defineAction, z } from 'astro:actions';
+  import { experimental_getActionState } from '@astrojs/react/actions';
+
+  export const server = {
+    like: defineAction({
+      input: z.object({
+        postId: z.string(),
+      }),
+      handler: async ({ postId }, ctx) => {
+        const currentLikes = experimental_getActionState<number>(ctx);
+        // write to database
+        return currentLikes + 1;
+      },
+    }),
+  };
+  ```
+
+## 3.3.4
+
+### Patch Changes
+
+- [#10986](https://github.com/withastro/astro/pull/10986) [`4d16381`](https://github.com/withastro/astro/commit/4d163811e1a25affb2c3d9adb3af650b7f1c91b6) Thanks [@emish89](https://github.com/emish89)! - Fixes incorrect `peerDependencies` for `@types/react` and `@types/react-dom`
+
+## 3.3.3
+
+### Patch Changes
+
+- [#10942](https://github.com/withastro/astro/pull/10942) [`d47baa4`](https://github.com/withastro/astro/commit/d47baa466aaeedde9c79ed5375d0be34762ac8b6) Thanks [@matthewp](https://github.com/matthewp)! - Updates package to support React 19 beta
+
+## 3.3.2
+
+### Patch Changes
+
+- [#10893](https://github.com/withastro/astro/pull/10893) [`fd7a9ed`](https://github.com/withastro/astro/commit/fd7a9ed3379a123f02f297b69fa5da0053e84a89) Thanks [@Angrigo](https://github.com/Angrigo)! - Removes using deprecated `ReactDOMServer.renderToStaticNodeStream` API
+
+## 3.3.1
+
+### Patch Changes
+
+- [#10855](https://github.com/withastro/astro/pull/10855) [`f6bddd3`](https://github.com/withastro/astro/commit/f6bddd3a155cd10a9f85c92d43b1af8b74786a42) Thanks [@lamATnginx](https://github.com/lamATnginx)! - Fix Redoc usage in React integration
+
+## 3.3.0
+
+### Minor Changes
+
+- [#10689](https://github.com/withastro/astro/pull/10689) [`683d51a5eecafbbfbfed3910a3f1fbf0b3531b99`](https://github.com/withastro/astro/commit/683d51a5eecafbbfbfed3910a3f1fbf0b3531b99) Thanks [@ematipico](https://github.com/ematipico)! - Deprecate support for versions of Node.js older than `v18.17.1` for Node.js 18, older than `v20.0.3` for Node.js 20, and the complete Node.js v19 release line.
+
+  This change is in line with Astro's [Node.js support policy](https://docs.astro.build/en/upgrade-astro/#support).
+
+## 3.2.0
+
+### Minor Changes
+
+- [#10675](https://github.com/withastro/astro/pull/10675) [`14f1d49a10541fecc4c10def8a094322442ccf23`](https://github.com/withastro/astro/commit/14f1d49a10541fecc4c10def8a094322442ccf23) Thanks [@fightingcat](https://github.com/fightingcat)! - Expose Babel config for @astro/react.
+
+## 3.1.1
+
+### Patch Changes
+
+- [#10654](https://github.com/withastro/astro/pull/10654) [`195f51f82a44df32be73865949aabee0d46ffe61`](https://github.com/withastro/astro/commit/195f51f82a44df32be73865949aabee0d46ffe61) Thanks [@matthewp](https://github.com/matthewp)! - Mark @material-tailwind/react as noExternal
+
+## 3.1.0
+
+### Minor Changes
+
+- [#10136](https://github.com/withastro/astro/pull/10136) [`9cd84bd19b92fb43ae48809f575ee12ebd43ea8f`](https://github.com/withastro/astro/commit/9cd84bd19b92fb43ae48809f575ee12ebd43ea8f) Thanks [@matthewp](https://github.com/matthewp)! - Changes the default behavior of `transition:persist` to update the props of persisted islands upon navigation. Also adds a new view transitions option `transition:persist-props` (default: `false`) to prevent props from updating as needed.
+
+  Islands which have the `transition:persist` property to keep their state when using the `<ViewTransitions />` router will now have their props updated upon navigation. This is useful in cases where the component relies on page-specific props, such as the current page title, which should update upon navigation.
+
+  For example, the component below is set to persist across navigation. This component receives a `products` props and might have some internal state, such as which filters are applied:
+
+  ```astro
+  <ProductListing transition:persist products={products} />
+  ```
+
+  Upon navigation, this component persists, but the desired `products` might change, for example if you are visiting a category of products, or you are performing a search.
+
+  Previously the props would not change on navigation, and your island would have to handle updating them externally, such as with API calls.
+
+  With this change the props are now updated, while still preserving state.
+
+  You can override this new default behavior on a per-component basis using `transition:persist-props=true` to persist both props and state during navigation:
+
+  ```astro
+  <ProductListing transition:persist-props="true" products={products} />
+  ```
+
+## 3.0.10
+
+### Patch Changes
+
+- [#9849](https://github.com/withastro/astro/pull/9849) [`20ca3154fb37049cbcd51b06d9fa2ef25ac25a36`](https://github.com/withastro/astro/commit/20ca3154fb37049cbcd51b06d9fa2ef25ac25a36) Thanks [@StandardGage](https://github.com/StandardGage)! - Fixes an issue where passing void elements (img, etc..) did not work with the `experimentalReactChildren` option enabled
+
+## 3.0.9
+
+### Patch Changes
+
+- [#9482](https://github.com/withastro/astro/pull/9482) [`72b26daf694b213918f02d0fcbf90ab5b7ebc31f`](https://github.com/withastro/astro/commit/72b26daf694b213918f02d0fcbf90ab5b7ebc31f) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Improves compatability with the [Qwik adapter](https://github.com/QwikDev/astro)
+
+- [#9479](https://github.com/withastro/astro/pull/9479) [`1baf0b0d3cbd0564954c2366a7278794fad6726e`](https://github.com/withastro/astro/commit/1baf0b0d3cbd0564954c2366a7278794fad6726e) Thanks [@sarah11918](https://github.com/sarah11918)! - Updates README
+
+## 3.0.8
+
+### Patch Changes
+
+- [#9403](https://github.com/withastro/astro/pull/9403) [`7eb9fe8a7`](https://github.com/withastro/astro/commit/7eb9fe8a717dd2b66b1d541e1aa4d3eb5d959ddf) Thanks [@knpwrs](https://github.com/knpwrs)! - Prevents unsupported `forwardRef` components created by Preact from being rendered by React
+
+- [#9452](https://github.com/withastro/astro/pull/9452) [`e83b5095f`](https://github.com/withastro/astro/commit/e83b5095f164f48ba40fc715a805fc66a3e39dcf) Thanks [@florian-lefebvre](https://github.com/florian-lefebvre)! - Upgrades vite to latest
+
+## 3.0.7
+
+### Patch Changes
+
+- [#9122](https://github.com/withastro/astro/pull/9122) [`1c48ed286`](https://github.com/withastro/astro/commit/1c48ed286538ab9e354eca4e4dcd7c6385c96721) Thanks [@bluwy](https://github.com/bluwy)! - Adds Vite 5 support. There are no breaking changes from Astro. Check the [Vite migration guide](https://vitejs.dev/guide/migration.html) for details of the breaking changes from Vite instead.
+
+## 3.0.7-beta.0
+
+### Patch Changes
+
+- [#9122](https://github.com/withastro/astro/pull/9122) [`1c48ed286`](https://github.com/withastro/astro/commit/1c48ed286538ab9e354eca4e4dcd7c6385c96721) Thanks [@bluwy](https://github.com/bluwy)! - Adds Vite 5 support. There are no breaking changes from Astro. Check the [Vite migration guide](https://vitejs.dev/guide/migration.html) for details of the breaking changes from Vite instead.
+
+## 3.0.6
+
+### Patch Changes
+
+- [#9141](https://github.com/withastro/astro/pull/9141) [`af43fb517`](https://github.com/withastro/astro/commit/af43fb51726fa2242cec03cb019fa4fa4a4403ef) Thanks [@lilnasy](https://github.com/lilnasy)! - Fixes an issue where slotting self-closing elements (img, br, hr) into react components with `experimentalReactChildren` enabled led to an error.
+
+## 3.0.5
+
+### Patch Changes
+
+- [#8925](https://github.com/withastro/astro/pull/8925) [`ac5633b8f`](https://github.com/withastro/astro/commit/ac5633b8f615fe90ea419e00c5c771d00783a6e2) Thanks [@brandonsdebt](https://github.com/brandonsdebt)! - Uses `node:stream` during server rendering for compatibility with Cloudflare
+
+## 3.0.4
+
+### Patch Changes
+
+- [#8898](https://github.com/withastro/astro/pull/8898) [`4dee38711`](https://github.com/withastro/astro/commit/4dee38711cbf83efb5e12fbfa8e69e2495c49acf) Thanks [@matthewp](https://github.com/matthewp)! - Fixes client hydration in islands when using experimentalReactChildren
+
+## 3.0.3
+
+### Patch Changes
+
+- [#8737](https://github.com/withastro/astro/pull/8737) [`6f60da805`](https://github.com/withastro/astro/commit/6f60da805e0014bc50dd07bef972e91c73560c3c) Thanks [@ematipico](https://github.com/ematipico)! - Add provenance statement when publishing the library from CI
+
+## 3.0.2
+
+### Patch Changes
+
+- [#8455](https://github.com/withastro/astro/pull/8455) [`85fe213fe`](https://github.com/withastro/astro/commit/85fe213fe0e8de3227ac80a41119800c374214f6) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Update `experimentalReactChildren` behavior to support void tags
+
+## 3.0.1
+
+### Patch Changes
+
+- [#8428](https://github.com/withastro/astro/pull/8428) [`67e834859`](https://github.com/withastro/astro/commit/67e83485949cf21de62831731111413abf57718c) Thanks [@matthewp](https://github.com/matthewp)! - Fix React dev mode using a base
+
+## 3.0.0
+
+### Major Changes
+
+- [#8188](https://github.com/withastro/astro/pull/8188) [`d0679a666`](https://github.com/withastro/astro/commit/d0679a666f37da0fca396d42b9b32bbb25d29312) Thanks [@ematipico](https://github.com/ematipico)! - Remove support for Node 16. The lowest supported version by Astro and all integrations is now v18.14.1. As a reminder, Node 16 will be deprecated on the 11th September 2023.
+
+- [#8179](https://github.com/withastro/astro/pull/8179) [`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7) Thanks [@matthewp](https://github.com/matthewp)! - Astro 3.0 Release Candidate
+
+- [#7924](https://github.com/withastro/astro/pull/7924) [`519a1c4e8`](https://github.com/withastro/astro/commit/519a1c4e8407c7abcb8d879b67a9f4b960652cae) Thanks [@matthewp](https://github.com/matthewp)! - Support for React Refresh
+
+  The React integration now fully supports React Refresh and is backed by `@vitejs/plugin-react`.
+
+  Also included in this change are new `include` and `exclude` config options. Use these if you want to use React alongside another JSX framework; include specifies files to be compiled for React and `exclude` does the opposite.
+
+### Patch Changes
+
+- [#8228](https://github.com/withastro/astro/pull/8228) [`4bd2fac8d`](https://github.com/withastro/astro/commit/4bd2fac8da4efb7c532d8920077df1f61d6e1953) Thanks [@bluwy](https://github.com/bluwy)! - Publish missing `vnode-children.js` file
+
+- [#8264](https://github.com/withastro/astro/pull/8264) [`1f58a7a1b`](https://github.com/withastro/astro/commit/1f58a7a1bea6888868b689dac94801d554319b02) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Automatically unmount islands when `astro:unmount` is fired
+
+- Updated dependencies [[`d0679a666`](https://github.com/withastro/astro/commit/d0679a666f37da0fca396d42b9b32bbb25d29312), [`2aa6d8ace`](https://github.com/withastro/astro/commit/2aa6d8ace398a41c2dec5473521d758816b08191), [`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7)]:
+  - @astrojs/internal-helpers@0.2.0
+
+## 3.0.0-rc.6
+
+### Patch Changes
+
+- [#8264](https://github.com/withastro/astro/pull/8264) [`1f58a7a1b`](https://github.com/withastro/astro/commit/1f58a7a1bea6888868b689dac94801d554319b02) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Automatically unmount islands when `astro:unmount` is fired
+
+## 3.0.0-rc.5
+
+### Patch Changes
+
+- [#8228](https://github.com/withastro/astro/pull/8228) [`4bd2fac8d`](https://github.com/withastro/astro/commit/4bd2fac8da4efb7c532d8920077df1f61d6e1953) Thanks [@bluwy](https://github.com/bluwy)! - Publish missing `vnode-children.js` file
+
+## 3.0.0-rc.4
+
+### Major Changes
+
+- [#8179](https://github.com/withastro/astro/pull/8179) [`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7) Thanks [@matthewp](https://github.com/matthewp)! - Astro 3.0 Release Candidate
+
+### Patch Changes
+
+- Updated dependencies [[`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7)]:
+  - @astrojs/internal-helpers@0.2.0-rc.2
+
+## 3.0.0-beta.3
+
+### Minor Changes
+
+- [#8082](https://github.com/withastro/astro/pull/8082) [`16a3fdf93`](https://github.com/withastro/astro/commit/16a3fdf93165a1a0404c1db0973871345b2c591b) Thanks [@matthewp](https://github.com/matthewp)! - Optionally parse React slots as React children.
+
+  This adds a new configuration option for the React integration `experimentalReactChildren`:
+
+  ```js
+  export default {
+    integrations: [
+      react({
+        experimentalReactChildren: true,
+      }),
+    ],
+  };
+  ```
+
+  With this enabled, children passed to React from Astro components via the default slot are parsed as React components.
+
+  This enables better compatibility with certain React components which manipulate their children.
+
+## 3.0.0-beta.2
+
+### Patch Changes
+
+- Updated dependencies [[`2aa6d8ace`](https://github.com/withastro/astro/commit/2aa6d8ace398a41c2dec5473521d758816b08191)]:
+  - @astrojs/internal-helpers@0.2.0-beta.1
+
+## 3.0.0-beta.1
+
+### Major Changes
+
+- [#7924](https://github.com/withastro/astro/pull/7924) [`519a1c4e8`](https://github.com/withastro/astro/commit/519a1c4e8407c7abcb8d879b67a9f4b960652cae) Thanks [@matthewp](https://github.com/matthewp)! - Support for React Refresh
+
+  The React integration now fully supports React Refresh and is backed by `@vitejs/plugin-react`.
+
+  Also included in this change are new `include` and `exclude` config options. Use these if you want to use React alongside another JSX framework; include specifies files to be compiled for React and `exclude` does the opposite.
+
+## 3.0.0-beta.0
+
+### Major Changes
+
+- [`1eae2e3f7`](https://github.com/withastro/astro/commit/1eae2e3f7d693c9dfe91c8ccfbe606d32bf2fb81) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Remove support for Node 16. The lowest supported version by Astro and all integrations is now v18.14.1. As a reminder, Node 16 will be deprecated on the 11th September 2023.
+
+## 2.3.2
+
+### Patch Changes
+
+- [#8149](https://github.com/withastro/astro/pull/8149) [`531cc3e49`](https://github.com/withastro/astro/commit/531cc3e490bc3bc1b896eeaec05664571df5bb24) Thanks [@matthewp](https://github.com/matthewp)! - Fix missing package file regression
+
+## 2.3.1
+
+### Patch Changes
+
+- [#8137](https://github.com/withastro/astro/pull/8137) [`8c0a4ed10`](https://github.com/withastro/astro/commit/8c0a4ed106efeda286f0aae8b959008f9462b5ec) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Fix missing export for new `experimentalReactChildren` option
+
+## 2.3.0
+
+### Minor Changes
+
+- [#8082](https://github.com/withastro/astro/pull/8082) [`16a3fdf93`](https://github.com/withastro/astro/commit/16a3fdf93165a1a0404c1db0973871345b2c591b) Thanks [@matthewp](https://github.com/matthewp)! - Optionally parse React slots as React children.
+
+  This adds a new configuration option for the React integration `experimentalReactChildren`:
+
+  ```js
+  export default {
+    integrations: [
+      react({
+        experimentalReactChildren: true,
+      }),
+    ],
+  };
+  ```
+
+  With this enabled, children passed to React from Astro components via the default slot are parsed as React components.
+
+  This enables better compatibility with certain React components which manipulate their children.
+
+## 2.2.2
+
+### Patch Changes
+
+- [#8075](https://github.com/withastro/astro/pull/8075) [`da517d405`](https://github.com/withastro/astro/commit/da517d4055825ee1b630cd4a6983818d6120a7b7) Thanks [@SudoCat](https://github.com/SudoCat)! - fix a bug where react identifierPrefix was set to null for client:only components causing React.useId to generate ids prefixed with null
+
+## 2.2.1
+
+### Patch Changes
+
+- [#7196](https://github.com/withastro/astro/pull/7196) [`1c77779dd`](https://github.com/withastro/astro/commit/1c77779dd66a6db77c81ed235da076a6118decde) Thanks [@bluwy](https://github.com/bluwy)! - Fix `astro-static-slot` hydration mismatch error
+
+## 2.2.0
+
+### Minor Changes
+
+- [#7093](https://github.com/withastro/astro/pull/7093) [`3d525efc9`](https://github.com/withastro/astro/commit/3d525efc95cfb2deb5d9e04856d02965d66901c9) Thanks [@matthewp](https://github.com/matthewp)! - Prevent removal of nested slots within islands
+
+  This change introduces a new flag that renderers can add called `supportsAstroStaticSlot`. What this does is let Astro know that the render is sending `<astro-static-slot>` as placeholder values for static (non-hydrated) slots which Astro will then remove.
+
+  This change is completely backwards compatible, but fixes bugs caused by combining ssr-only and client-side framework components like so:
+
+  ```astro
+  <Component>
+    <div>
+      <Component client:load>
+        <span>Nested</span>
+      </Component>
+    </div>
+  </Component>
+  ```
+
+### Patch Changes
+
+- [#7104](https://github.com/withastro/astro/pull/7104) [`826e02890`](https://github.com/withastro/astro/commit/826e0289005f645b902375b98d5549c6a95ccafa) Thanks [@bluwy](https://github.com/bluwy)! - Specify `"files"` field to only publish necessary files
+
+## 2.1.3
+
+### Patch Changes
+
+- [#6976](https://github.com/withastro/astro/pull/6976) [`ca329bbca`](https://github.com/withastro/astro/commit/ca329bbcae7a6075af4f428f6f64466e9d152c8f) Thanks [@SudoCat](https://github.com/SudoCat)! - Prevent ID collisions in React.useId
+
+## 2.1.2
+
+### Patch Changes
+
+- [#6933](https://github.com/withastro/astro/pull/6933) [`649d70934`](https://github.com/withastro/astro/commit/649d70934e709bb1aa6e5e7583b12fa1703377cb) Thanks [@matthewp](https://github.com/matthewp)! - Automatically configure redoc
+
+## 2.1.1
+
+### Patch Changes
+
+- [#6698](https://github.com/withastro/astro/pull/6698) [`fc71c3f18`](https://github.com/withastro/astro/commit/fc71c3f18819ac3ad62809a7eeff5fe7840f2c4b) Thanks [@bholmesdev](https://github.com/bholmesdev)! - Update React README to reference the [new React docs](https://react.dev)
+
+- [#6696](https://github.com/withastro/astro/pull/6696) [`239b9a2fb`](https://github.com/withastro/astro/commit/239b9a2fb864fa785e4150cd8aa833de72dd3517) Thanks [@matthewp](https://github.com/matthewp)! - Add use-immer as a noExternal module
+
+## 2.1.0
+
+### Minor Changes
+
+- [#6213](https://github.com/withastro/astro/pull/6213) [`afbbc4d5b`](https://github.com/withastro/astro/commit/afbbc4d5bfafc1779bac00b41c2a1cb1c90f2808) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Updated compilation settings to disable downlevelling for Node 14
+
 ## 2.0.2
 
 ### Patch Changes

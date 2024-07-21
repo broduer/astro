@@ -1,14 +1,16 @@
 import type { Options as AcornOpts } from 'acorn';
 import { parse } from 'acorn';
-import type { AstroConfig, SSRError } from 'astro';
+import type { AstroConfig, AstroIntegrationLogger, SSRError } from 'astro';
 import matter from 'gray-matter';
+import { bold } from 'kleur/colors';
 import type { MdxjsEsm } from 'mdast-util-mdx';
+import type { PluggableList } from 'unified';
 
 function appendForwardSlash(path: string) {
 	return path.endsWith('/') ? path : path + '/';
 }
 
-interface FileInfo {
+export interface FileInfo {
 	fileId: string;
 	fileUrl: string;
 }
@@ -29,8 +31,8 @@ export function getFileInfo(id: string, config: AstroConfig): FileInfo {
 	let fileUrl: string;
 	const isPage = fileId.includes('/pages/');
 	if (isPage) {
-		fileUrl = fileId.replace(/^.*?\/pages\//, sitePathname).replace(/(\/index)?\.mdx$/, '');
-	} else if (url && url.pathname.startsWith(config.root.pathname)) {
+		fileUrl = fileId.replace(/^.*?\/pages\//, sitePathname).replace(/(?:\/index)?\.mdx$/, '');
+	} else if (url?.pathname.startsWith(config.root.pathname)) {
 		fileUrl = url.pathname.slice(config.root.pathname.length);
 	} else {
 		fileUrl = fileId;
@@ -73,8 +75,8 @@ export function jsToTreeNode(
 		type: 'mdxjsEsm',
 		value: '',
 		data: {
+			// @ts-expect-error `parse` return types is incompatible but it should work in runtime
 			estree: {
-				body: [],
 				...parse(jsString, acornOpts),
 				type: 'Program',
 				sourceType: 'module',
@@ -83,20 +85,24 @@ export function jsToTreeNode(
 	};
 }
 
-// Following utils taken from `packages/astro/src/core/path.ts`:
-export function isRelativePath(path: string) {
-	return startsWithDotDotSlash(path) || startsWithDotSlash(path);
-}
-
-function startsWithDotDotSlash(path: string) {
-	const c1 = path[0];
-	const c2 = path[1];
-	const c3 = path[2];
-	return c1 === '.' && c2 === '.' && c3 === '/';
-}
-
-function startsWithDotSlash(path: string) {
-	const c1 = path[0];
-	const c2 = path[1];
-	return c1 === '.' && c2 === '/';
+export function ignoreStringPlugins(plugins: any[], logger: AstroIntegrationLogger): PluggableList {
+	let validPlugins: PluggableList = [];
+	let hasInvalidPlugin = false;
+	for (const plugin of plugins) {
+		if (typeof plugin === 'string') {
+			logger.warn(`${bold(plugin)} not applied.`);
+			hasInvalidPlugin = true;
+		} else if (Array.isArray(plugin) && typeof plugin[0] === 'string') {
+			logger.warn(`${bold(plugin[0])} not applied.`);
+			hasInvalidPlugin = true;
+		} else {
+			validPlugins.push(plugin);
+		}
+	}
+	if (hasInvalidPlugin) {
+		logger.warn(
+			`To inherit Markdown plugins in MDX, please use explicit imports in your config instead of "strings." See Markdown docs: https://docs.astro.build/en/guides/markdown-content/#markdown-plugins`
+		);
+	}
+	return validPlugins;
 }

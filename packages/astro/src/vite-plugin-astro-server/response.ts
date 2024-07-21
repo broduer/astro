@@ -1,6 +1,6 @@
-import type http from 'http';
+import type http from 'node:http';
 import type { ErrorWithMetadata } from '../core/errors/index.js';
-import type { ModuleLoader } from '../core/module-loader/index';
+import type { ModuleLoader } from '../core/module-loader/index.js';
 
 import { Readable } from 'stream';
 import { getSetCookiesFromResponse } from '../core/cookies/index.js';
@@ -57,20 +57,15 @@ export async function writeWebResponse(res: http.ServerResponse, webResponse: Re
 
 	// Attach any set-cookie headers added via Astro.cookies.set()
 	const setCookieHeaders = Array.from(getSetCookiesFromResponse(webResponse));
-	setCookieHeaders.forEach((cookie) => {
-		headers.append('set-cookie', cookie);
-	});
+	if (setCookieHeaders.length) {
+		// Always use `res.setHeader` because headers.append causes them to be concatenated.
+		res.setHeader('set-cookie', setCookieHeaders);
+	}
 
-	const _headers = Object.fromEntries(headers.entries());
+	const _headers: http.OutgoingHttpHeaders = Object.fromEntries(headers.entries());
 
-	// Undici 5.20.0+ includes a `getSetCookie` helper that returns an array of all the `set-cookies` headers.
-	// Previously, `headers.entries()` would already have these merged, but it seems like this isn't the case anymore.
 	if (headers.has('set-cookie')) {
-		if ('getSetCookie' in headers && typeof headers.getSetCookie === 'function') {
-			_headers['set-cookie'] = headers.getSetCookie();
-		} else {
-			_headers['set-cookie'] = headers.get('set-cookie')!;
-		}
+		_headers['set-cookie'] = headers.getSetCookie();
 	}
 
 	res.writeHead(status, _headers);
@@ -87,6 +82,11 @@ export async function writeWebResponse(res: http.ServerResponse, webResponse: Re
 			res.write(body);
 		} else {
 			const reader = body.getReader();
+			res.on('close', () => {
+				reader.cancel().catch(() => {
+					// Don't log here, or errors will get logged twice in most cases
+				});
+			});
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
@@ -99,6 +99,11 @@ export async function writeWebResponse(res: http.ServerResponse, webResponse: Re
 	res.end();
 }
 
-export async function writeSSRResult(webResponse: Response, res: http.ServerResponse) {
+export async function writeSSRResult(
+	webRequest: Request,
+	webResponse: Response,
+	res: http.ServerResponse
+) {
+	Reflect.set(webRequest, Symbol.for('astro.responseSent'), true);
 	return writeWebResponse(res, webResponse);
 }

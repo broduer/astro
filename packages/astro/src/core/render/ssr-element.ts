@@ -1,37 +1,55 @@
-import slashify from 'slash';
-import type { SSRElement } from '../../@types/astro';
-import { appendForwardSlash, removeLeadingForwardSlash } from '../../core/path.js';
+import type { AssetsPrefix, SSRElement } from '../../@types/astro.js';
+import { getAssetsPrefix } from '../../assets/utils/getAssetsPrefix.js';
+import { fileExtension, joinPaths, prependForwardSlash, slash } from '../../core/path.js';
+import type { StylesheetAsset } from '../app/types.js';
 
-function getRootPath(base?: string): string {
-	return appendForwardSlash(new URL(base || '/', 'http://localhost/').pathname);
+export function createAssetLink(href: string, base?: string, assetsPrefix?: AssetsPrefix): string {
+	if (assetsPrefix) {
+		const pf = getAssetsPrefix(fileExtension(href), assetsPrefix);
+		return joinPaths(pf, slash(href));
+	} else if (base) {
+		return prependForwardSlash(joinPaths(base, slash(href)));
+	} else {
+		return href;
+	}
 }
 
-function joinToRoot(href: string, base?: string): string {
-	const rootPath = getRootPath(base);
-	const normalizedHref = slashify(href);
-	return appendForwardSlash(rootPath) + removeLeadingForwardSlash(normalizedHref);
+export function createStylesheetElement(
+	stylesheet: StylesheetAsset,
+	base?: string,
+	assetsPrefix?: AssetsPrefix
+): SSRElement {
+	if (stylesheet.type === 'inline') {
+		return {
+			props: {},
+			children: stylesheet.content,
+		};
+	} else {
+		return {
+			props: {
+				rel: 'stylesheet',
+				href: createAssetLink(stylesheet.src, base, assetsPrefix),
+			},
+			children: '',
+		};
+	}
 }
 
-export function createLinkStylesheetElement(href: string, base?: string): SSRElement {
-	return {
-		props: {
-			rel: 'stylesheet',
-			href: joinToRoot(href, base),
-		},
-		children: '',
-	};
-}
-
-export function createLinkStylesheetElementSet(hrefs: string[], base?: string) {
-	return new Set<SSRElement>(hrefs.map((href) => createLinkStylesheetElement(href, base)));
+export function createStylesheetElementSet(
+	stylesheets: StylesheetAsset[],
+	base?: string,
+	assetsPrefix?: AssetsPrefix
+): Set<SSRElement> {
+	return new Set(stylesheets.map((s) => createStylesheetElement(s, base, assetsPrefix)));
 }
 
 export function createModuleScriptElement(
 	script: { type: 'inline' | 'external'; value: string },
-	base?: string
+	base?: string,
+	assetsPrefix?: AssetsPrefix
 ): SSRElement {
 	if (script.type === 'external') {
-		return createModuleScriptElementWithSrc(script.value, base);
+		return createModuleScriptElementWithSrc(script.value, base, assetsPrefix);
 	} else {
 		return {
 			props: {
@@ -42,11 +60,15 @@ export function createModuleScriptElement(
 	}
 }
 
-export function createModuleScriptElementWithSrc(src: string, site?: string): SSRElement {
+export function createModuleScriptElementWithSrc(
+	src: string,
+	base?: string,
+	assetsPrefix?: AssetsPrefix
+): SSRElement {
 	return {
 		props: {
 			type: 'module',
-			src: joinToRoot(src, site),
+			src: createAssetLink(src, base, assetsPrefix),
 		},
 		children: '',
 	};
@@ -54,14 +76,20 @@ export function createModuleScriptElementWithSrc(src: string, site?: string): SS
 
 export function createModuleScriptElementWithSrcSet(
 	srces: string[],
-	site?: string
+	site?: string,
+	assetsPrefix?: AssetsPrefix
 ): Set<SSRElement> {
-	return new Set<SSRElement>(srces.map((src) => createModuleScriptElementWithSrc(src, site)));
+	return new Set<SSRElement>(
+		srces.map((src) => createModuleScriptElementWithSrc(src, site, assetsPrefix))
+	);
 }
 
 export function createModuleScriptsSet(
 	scripts: { type: 'inline' | 'external'; value: string }[],
-	base?: string
+	base?: string,
+	assetsPrefix?: AssetsPrefix
 ): Set<SSRElement> {
-	return new Set<SSRElement>(scripts.map((script) => createModuleScriptElement(script, base)));
+	return new Set<SSRElement>(
+		scripts.map((script) => createModuleScriptElement(script, base, assetsPrefix))
+	);
 }

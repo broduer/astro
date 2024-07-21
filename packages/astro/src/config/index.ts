@@ -1,12 +1,15 @@
-import type { UserConfig } from 'vite';
-import type { AstroUserConfig } from '../@types/astro';
-import type { LogOptions } from '../core/logger/core';
+import type { UserConfig as ViteUserConfig } from 'vite';
+import type { AstroInlineConfig, AstroUserConfig } from '../@types/astro.js';
+import { Logger } from '../core/logger/core.js';
 
 export function defineConfig(config: AstroUserConfig) {
 	return config;
 }
 
-export function getViteConfig(inlineConfig: UserConfig) {
+export function getViteConfig(
+	userViteConfig: ViteUserConfig,
+	inlineAstroConfig: AstroInlineConfig = {}
+) {
 	// Return an async Vite config getter which exposes a resolved `mode` and `command`
 	return async ({ mode, command }: { mode: string; command: 'serve' | 'build' }) => {
 		// Vite `command` is `serve | build`, but Astro uses `dev | build`
@@ -14,35 +17,40 @@ export function getViteConfig(inlineConfig: UserConfig) {
 
 		// Use dynamic import to avoid pulling in deps unless used
 		const [
+			fs,
 			{ mergeConfig },
 			{ nodeLogDestination },
-			{ openConfig, createSettings },
+			{ resolveConfig, createSettings },
 			{ createVite },
 			{ runHookConfigSetup, runHookConfigDone },
+			{ astroContentListenPlugin },
 		] = await Promise.all([
+			import('node:fs'),
 			import('vite'),
 			import('../core/logger/node.js'),
 			import('../core/config/index.js'),
 			import('../core/create-vite.js'),
-			import('../integrations/index.js'),
+			import('../integrations/hooks.js'),
+			import('./vite-plugin-content-listen.js'),
 		]);
-		const logging: LogOptions = {
+		const logger = new Logger({
 			dest: nodeLogDestination,
 			level: 'info',
-		};
-		const { astroConfig: config } = await openConfig({
-			cmd,
-			logging,
 		});
-		const settings = createSettings(config, inlineConfig.root);
-		await runHookConfigSetup({ settings, command: cmd, logging });
+		const { astroConfig: config } = await resolveConfig(inlineAstroConfig, cmd);
+		let settings = await createSettings(config, userViteConfig.root);
+		settings = await runHookConfigSetup({ settings, command: cmd, logger });
 		const viteConfig = await createVite(
 			{
 				mode,
+				plugins: [
+					// Initialize the content listener
+					astroContentListenPlugin({ settings, logger, fs }),
+				],
 			},
-			{ settings, logging: logging, mode }
+			{ settings, logger, mode, sync: false }
 		);
-		await runHookConfigDone({ settings, logging });
-		return mergeConfig(viteConfig, inlineConfig);
+		await runHookConfigDone({ settings, logger });
+		return mergeConfig(viteConfig, userViteConfig);
 	};
 }

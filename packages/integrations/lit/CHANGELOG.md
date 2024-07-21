@@ -1,5 +1,161 @@
 # @astrojs/lit
 
+## 4.3.0
+
+### Minor Changes
+
+- [#11234](https://github.com/withastro/astro/pull/11234) [`4385bf7`](https://github.com/withastro/astro/commit/4385bf7a4dc9c65bff53a30c660f7a909fcabfc9) Thanks [@ematipico](https://github.com/ematipico)! - Adds a new function called `addServerRenderer` to the Container API. Use this function to manually store renderers inside the instance of your container.
+
+  This new function should be preferred when using the Container API in environments like on-demand pages:
+
+  ```ts
+  import type { APIRoute } from 'astro';
+  import { experimental_AstroContainer } from 'astro/container';
+  import reactRenderer from '@astrojs/react/server.js';
+  import vueRenderer from '@astrojs/vue/server.js';
+  import ReactComponent from '../components/button.jsx';
+  import VueComponent from '../components/button.vue';
+
+  // MDX runtime is contained inside the Astro core
+  import mdxRenderer from 'astro/jsx/server.js';
+
+  // In case you need to import a custom renderer
+  import customRenderer from '../renderers/customRenderer.js';
+
+  export const GET: APIRoute = async (ctx) => {
+    const container = await experimental_AstroContainer.create();
+    container.addServerRenderer({ renderer: reactRenderer });
+    container.addServerRenderer({ renderer: vueRenderer });
+    container.addServerRenderer({ renderer: customRenderer });
+    // You can pass a custom name too
+    container.addServerRenderer({
+      name: 'customRenderer',
+      renderer: customRenderer,
+    });
+    const vueComponent = await container.renderToString(VueComponent);
+    return await container.renderToResponse(Component);
+  };
+  ```
+
+## 4.2.0
+
+### Minor Changes
+
+- [#11144](https://github.com/withastro/astro/pull/11144) [`803dd80`](https://github.com/withastro/astro/commit/803dd8061df02138b4928442bcb76e77dcf6f5e7) Thanks [@ematipico](https://github.com/ematipico)! - The integration now exposes a function called `getContainerRenderer`, that can be used inside the Container APIs to load the relative renderer.
+
+  ```js
+  import { experimental_AstroContainer as AstroContainer } from 'astro/container';
+  import ReactWrapper from '../src/components/ReactWrapper.astro';
+  import { loadRenderers } from 'astro:container';
+  import { getContainerRenderer } from '@astrojs/react';
+
+  test('ReactWrapper with react renderer', async () => {
+    const renderers = await loadRenderers([getContainerRenderer()]);
+    const container = await AstroContainer.create({
+      renderers,
+    });
+    const result = await container.renderToString(ReactWrapper);
+
+    expect(result).toContain('Counter');
+    expect(result).toContain('Count: <!-- -->5');
+  });
+  ```
+
+## 4.1.0
+
+### Minor Changes
+
+- [#11164](https://github.com/withastro/astro/pull/11164) [`cf9b2ff`](https://github.com/withastro/astro/commit/cf9b2ff7967c4287ab26ec65fc4bb2eed525a235) Thanks [@scottnath](https://github.com/scottnath)! - Removes deprecated `template` attribute and replaces deprecated domparser function
+
+## 4.0.1
+
+### Patch Changes
+
+- [#9479](https://github.com/withastro/astro/pull/9479) [`1baf0b0d3cbd0564954c2366a7278794fad6726e`](https://github.com/withastro/astro/commit/1baf0b0d3cbd0564954c2366a7278794fad6726e) Thanks [@sarah11918](https://github.com/sarah11918)! - Updates README
+
+## 4.0.0
+
+### Major Changes
+
+- [#8822](https://github.com/withastro/astro/pull/8822) [`b0a71946f`](https://github.com/withastro/astro/commit/b0a71946f4320d4e76f31e990fe5821f823f0e12) Thanks [@Geoffrey-Pliez](https://github.com/Geoffrey-Pliez)! - Upgrade to Lit 3.0
+
+## 3.0.3
+
+### Patch Changes
+
+- [#9018](https://github.com/withastro/astro/pull/9018) [`23c9a30ad`](https://github.com/withastro/astro/commit/23c9a30ad859398d62a013d639b5b2716b583331) Thanks [@augustjk](https://github.com/augustjk)! - Fix hydration ordering of nested custom elements. Child components will now wait for their parents to hydrate before hydrating themselves.
+
+## 3.0.2
+
+### Patch Changes
+
+- [#8826](https://github.com/withastro/astro/pull/8826) [`754c40f6e`](https://github.com/withastro/astro/commit/754c40f6ed941a61362d221915568c04ae85d6ad) Thanks [@lilnasy](https://github.com/lilnasy)! - Fixed an issue where an incompatible version of lit was installed.
+
+## 3.0.1
+
+### Patch Changes
+
+- [#8737](https://github.com/withastro/astro/pull/8737) [`6f60da805`](https://github.com/withastro/astro/commit/6f60da805e0014bc50dd07bef972e91c73560c3c) Thanks [@ematipico](https://github.com/ematipico)! - Add provenance statement when publishing the library from CI
+
+## 3.0.0
+
+### Major Changes
+
+- [#8188](https://github.com/withastro/astro/pull/8188) [`d0679a666`](https://github.com/withastro/astro/commit/d0679a666f37da0fca396d42b9b32bbb25d29312) Thanks [@ematipico](https://github.com/ematipico)! - Remove support for Node 16. The lowest supported version by Astro and all integrations is now v18.14.1. As a reminder, Node 16 will be deprecated on the 11th September 2023.
+
+- [#8179](https://github.com/withastro/astro/pull/8179) [`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7) Thanks [@matthewp](https://github.com/matthewp)! - Astro 3.0 Release Candidate
+
+## 3.0.0-rc.1
+
+### Major Changes
+
+- [#8179](https://github.com/withastro/astro/pull/8179) [`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7) Thanks [@matthewp](https://github.com/matthewp)! - Astro 3.0 Release Candidate
+
+## 3.0.0-beta.0
+
+### Major Changes
+
+- [`1eae2e3f7`](https://github.com/withastro/astro/commit/1eae2e3f7d693c9dfe91c8ccfbe606d32bf2fb81) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Remove support for Node 16. The lowest supported version by Astro and all integrations is now v18.14.1. As a reminder, Node 16 will be deprecated on the 11th September 2023.
+
+## 2.1.1
+
+### Patch Changes
+
+- [#7985](https://github.com/withastro/astro/pull/7985) [`ec06dd9bb`](https://github.com/withastro/astro/commit/ec06dd9bbb29cc38e891517fbf884cb7083b3240) Thanks [@delucis](https://github.com/delucis)! - Fix formatting in Lit README
+
+## 2.1.0
+
+### Minor Changes
+
+- [#7373](https://github.com/withastro/astro/pull/7373) [`0986a44dd`](https://github.com/withastro/astro/commit/0986a44ddd2b48edbe318f6fceb7f4ce4670ce05) Thanks [@matthewp](https://github.com/matthewp)! - Upgrade lit dependencies
+
+## 2.0.2
+
+### Patch Changes
+
+- [#7104](https://github.com/withastro/astro/pull/7104) [`826e02890`](https://github.com/withastro/astro/commit/826e0289005f645b902375b98d5549c6a95ccafa) Thanks [@bluwy](https://github.com/bluwy)! - Specify `"files"` field to only publish necessary files
+
+## 2.0.1
+
+### Patch Changes
+
+- [#6752](https://github.com/withastro/astro/pull/6752) [`c7eb0d431`](https://github.com/withastro/astro/commit/c7eb0d431032edc5d4af72726d84e1c52ef36575) Thanks [@augustjk](https://github.com/augustjk)! - Provide `renderInfo` when rendering Lit components. Fixes issue with rendering nested components.
+
+## 2.0.0
+
+### Major Changes
+
+- [#6681](https://github.com/withastro/astro/pull/6681) [`4b077318f`](https://github.com/withastro/astro/commit/4b077318fbc21c4350cc21c380d96b54d302759c) Thanks [@e111077](https://github.com/e111077)! - Update to use `@lit-labs/ssr@^3`
+  **[BREAKING]** DOM shim required for Lit SSR has been greatly reduced. `window`, `document`, and other objects are no longer available in global. Most SSR-ready component code should not be affected but, if so, they can be fixed with optional chaining or by using the `isServer` environment checker from the `lit` package. See [lit.dev docs on authoring components for SSR].(https://lit.dev/docs/ssr/authoring/#browser-only-code)
+  **[BREAKING]** Adds compatibility with `lit@2.7.0` hydration behavior. Do not update if you're using `lit@2.6.1` or lower.
+  Includes support for template[shadowrootmode] support.
+
+## 1.3.0
+
+### Minor Changes
+
+- [#6213](https://github.com/withastro/astro/pull/6213) [`afbbc4d5b`](https://github.com/withastro/astro/commit/afbbc4d5bfafc1779bac00b41c2a1cb1c90f2808) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Updated compilation settings to disable downlevelling for Node 14
+
 ## 1.2.1
 
 ### Patch Changes

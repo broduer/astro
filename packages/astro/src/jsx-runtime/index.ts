@@ -1,4 +1,4 @@
-import { Fragment, markHTMLString, Renderer } from '../runtime/server/index.js';
+import { Fragment, Renderer, markHTMLString } from '../runtime/server/index.js';
 
 const AstroJSX = 'astro:jsx';
 const Empty = Symbol('empty');
@@ -29,8 +29,7 @@ export function transformSlots(vnode: AstroVNode) {
 		slots[name]['$$slot'] = true;
 		delete child.props.slot;
 		delete vnode.props.children;
-	}
-	if (Array.isArray(vnode.props.children)) {
+	} else if (Array.isArray(vnode.props.children)) {
 		// Handle many children with slot attributes
 		vnode.props.children = vnode.props.children
 			.map((child) => {
@@ -85,4 +84,4 @@ function createVNode(type: any, props: Record<string, any>) {
 	return vnode;
 }
 
-export { AstroJSX, createVNode as jsx, createVNode as jsxs, createVNode as jsxDEV, Fragment };
+export { AstroJSX, Fragment, createVNode as jsx, createVNode as jsxDEV, createVNode as jsxs };

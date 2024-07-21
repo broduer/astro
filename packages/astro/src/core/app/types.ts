@@ -1,14 +1,21 @@
-import type { MarkdownRenderingOptions } from '@astrojs/markdown-remark';
 import type {
 	ComponentInstance,
-	PropagationHint,
+	Locales,
+	MiddlewareHandler,
 	RouteData,
-	SerializedRouteData,
+	SSRComponentMetadata,
 	SSRLoadedRenderer,
 	SSRResult,
-} from '../../@types/astro';
+	SerializedRouteData,
+} from '../../@types/astro.js';
+import type { RoutingStrategies } from '../../i18n/utils.js';
+import type { SinglePageBuiltModule } from '../build/types.js';
 
 export type ComponentPath = string;
+
+export type StylesheetAsset =
+	| { type: 'inline'; content: string }
+	| { type: 'external'; src: string };
 
 export interface RouteInfo {
 	routeData: RouteData;
@@ -20,32 +27,76 @@ export interface RouteInfo {
 		// Hoisted
 		| { type: 'inline' | 'external'; value: string }
 	)[];
+	styles: StylesheetAsset[];
 }
 
 export type SerializedRouteInfo = Omit<RouteInfo, 'routeData'> & {
 	routeData: SerializedRouteData;
 };
 
-export interface SSRManifest {
+export type ImportComponentInstance = () => Promise<SinglePageBuiltModule>;
+
+export type AssetsPrefix =
+	| string
+	| ({
+			fallback: string;
+	  } & Record<string, string>)
+	| undefined;
+
+export type SSRManifest = {
+	hrefRoot: string;
 	adapterName: string;
 	routes: RouteInfo[];
 	site?: string;
-	base?: string;
-	markdown: MarkdownRenderingOptions;
-	pageMap: Map<ComponentPath, ComponentInstance>;
+	base: string;
+	trailingSlash: 'always' | 'never' | 'ignore';
+	buildFormat: 'file' | 'directory' | 'preserve';
+	compressHTML: boolean;
+	assetsPrefix?: AssetsPrefix;
 	renderers: SSRLoadedRenderer[];
+	/**
+	 * Map of directive name (e.g. `load`) to the directive script code
+	 */
+	clientDirectives: Map<string, string>;
 	entryModules: Record<string, string>;
+	inlinedScripts: Map<string, string>;
 	assets: Set<string>;
-	propagation: SSRResult['propagation'];
-}
-
-export type SerializedSSRManifest = Omit<SSRManifest, 'routes' | 'assets' | 'propagation'> & {
-	routes: SerializedRouteInfo[];
-	assets: string[];
-	propagation: readonly [string, PropagationHint][];
+	componentMetadata: SSRResult['componentMetadata'];
+	pageModule?: SinglePageBuiltModule;
+	pageMap?: Map<ComponentPath, ImportComponentInstance>;
+	serverIslandMap?: Map<string, () => Promise<ComponentInstance>>;
+	serverIslandNameMap?: Map<string, string>;
+	i18n: SSRManifestI18n | undefined;
+	middleware: MiddlewareHandler;
+	checkOrigin: boolean;
+	// TODO: remove once the experimental flag is removed
+	rewritingEnabled: boolean;
+	// TODO: remove experimental prefix
+	experimentalEnvGetSecretEnabled: boolean;
 };
 
-export type AdapterCreateExports<T = any> = (
-	manifest: SSRManifest,
-	args?: T
-) => Record<string, any>;
+export type SSRManifestI18n = {
+	fallback: Record<string, string> | undefined;
+	strategy: RoutingStrategies;
+	locales: Locales;
+	defaultLocale: string;
+	domainLookupTable: Record<string, string>;
+};
+
+export type SerializedSSRManifest = Omit<
+	SSRManifest,
+	| 'middleware'
+	| 'routes'
+	| 'assets'
+	| 'componentMetadata'
+	| 'inlinedScripts'
+	| 'clientDirectives'
+	| 'serverIslandNameMap'
+> & {
+	routes: SerializedRouteInfo[];
+	assets: string[];
+	componentMetadata: [string, SSRComponentMetadata][];
+	inlinedScripts: [string, string][];
+	clientDirectives: [string, string][];
+	serverIslandNameMap: [string, string][];
+};

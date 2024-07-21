@@ -1,7 +1,7 @@
 {
   "name": "@astrojs/react",
   "description": "Use React components within Astro",
-  "version": "2.0.2",
+  "version": "3.6.0",
   "type": "module",
   "types": "./dist/index.d.ts",
   "author": "withastro",
@@ -21,37 +21,63 @@
   "homepage": "https://docs.astro.build/en/guides/integrations-guide/react/",
   "exports": {
     ".": "./dist/index.js",
+    "./actions": "./dist/actions.js",
     "./client.js": "./client.js",
     "./client-v17.js": "./client-v17.js",
-    "./server.js": "./server.js",
-    "./server-v17.js": "./server-v17.js",
+    "./server.js": {
+      "default": "./server.js",
+      "types": "./server.d.ts"
+    },
+    "./server-v17.js": {
+      "default": "./server-v17.js",
+      "types": "./server-v17.d.ts"
+    },
     "./package.json": "./package.json",
     "./jsx-runtime": "./jsx-runtime.js"
   },
+  "files": [
+    "dist",
+    "client.js",
+    "client-v17.js",
+    "context.js",
+    "jsx-runtime.js",
+    "server.js",
+    "server.d.ts",
+    "server-v17.js",
+    "server-v17.d.ts",
+    "static-html.js",
+    "vnode-children.js"
+  ],
   "scripts": {
     "build": "astro-scripts build \"src/**/*.ts\" && tsc",
     "build:ci": "astro-scripts build \"src/**/*.ts\"",
-    "dev": "astro-scripts dev \"src/**/*.ts\""
+    "dev": "astro-scripts dev \"src/**/*.ts\"",
+    "test": "astro-scripts test \"test/**/*.test.js\""
   },
   "dependencies": {
-    "@babel/core": ">=7.0.0-0 <8.0.0",
-    "@babel/plugin-transform-react-jsx": "^7.17.12"
+    "@vitejs/plugin-react": "^4.3.1",
+    "ultrahtml": "^1.5.3"
   },
   "devDependencies": {
-    "@types/react": "^17.0.45",
-    "@types/react-dom": "^17.0.17",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
     "astro": "workspace:*",
     "astro-scripts": "workspace:*",
-    "react": "^18.1.0",
-    "react-dom": "^18.1.0"
+    "cheerio": "1.0.0-rc.12",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^5.3.4"
   },
   "peerDependencies": {
-    "react": "^17.0.2 || ^18.0.0",
-    "react-dom": "^17.0.2 || ^18.0.0",
     "@types/react": "^17.0.50 || ^18.0.21",
-    "@types/react-dom": "^17.0.17 || ^18.0.6"
+    "@types/react-dom": "^17.0.17 || ^18.0.6",
+    "react": "^17.0.2 || ^18.0.0 || ^19.0.0-beta",
+    "react-dom": "^17.0.2 || ^18.0.0 || ^19.0.0-beta"
   },
   "engines": {
-    "node": ">=16.12.0"
+    "node": "^18.17.1 || ^20.3.0 || >=21.0.0"
+  },
+  "publishConfig": {
+    "provenance": true
   }
 }

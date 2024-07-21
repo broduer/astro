@@ -1,18 +1,24 @@
-import { polyfill } from '@astrojs/webapi';
 import type { SSRManifest } from 'astro';
-import { NodeApp } from 'astro/app/node';
-import middleware from './middleware.js';
+import { NodeApp, applyPolyfills } from 'astro/app/node';
+import createMiddleware from './middleware.js';
+import { createStandaloneHandler } from './standalone.js';
 import startServer from './standalone.js';
-import type { Options } from './types';
+import type { Options } from './types.js';
 
-polyfill(globalThis, {
-	exclude: 'window document',
-});
+// Won't throw if the virtual module is not available because it's not supported in
+// the users's astro version or if astro:env is not enabled in the project
+await import('astro/env/setup')
+	.then((mod) => mod.setGetEnv((key) => process.env[key]))
+	.catch(() => {});
 
+applyPolyfills();
 export function createExports(manifest: SSRManifest, options: Options) {
 	const app = new NodeApp(manifest);
+	options.trailingSlash = manifest.trailingSlash;
 	return {
-		handler: middleware(app, options.mode),
+		options: options,
+		handler:
+			options.mode === 'middleware' ? createMiddleware(app) : createStandaloneHandler(app, options),
 		startServer: () => startServer(app, options),
 	};
 }

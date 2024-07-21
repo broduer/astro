@@ -1,34 +1,25 @@
-import type { Plugin as VitePlugin, UserConfig } from 'vite';
+import type { Plugin as VitePlugin } from 'vite';
 import type { BuildInternals } from '../internal.js';
-import type { AstroBuildPlugin } from '../plugin';
+import type { AstroBuildPlugin } from '../plugin.js';
+import { normalizeEntryId } from './plugin-component-entry.js';
 
 export function vitePluginInternals(input: Set<string>, internals: BuildInternals): VitePlugin {
 	return {
 		name: '@astro/plugin-build-internals',
 
 		config(config, options) {
-			const extra: Partial<UserConfig> = {};
-			const noExternal = [],
-				external = [];
 			if (options.command === 'build' && config.build?.ssr) {
-				noExternal.push('astro');
-				external.push('shiki');
-			}
-
-			// @ts-ignore
-			extra.ssr = {
-				external,
-				noExternal,
-			};
-			return extra;
-		},
-
-		configResolved(resolvedConfig) {
-			// Delete this hook because it causes assets not to be built
-			const plugins = resolvedConfig.plugins as VitePlugin[];
-			const viteAsset = plugins.find((p) => p.name === 'vite:asset');
-			if (viteAsset) {
-				delete viteAsset.generateBundle;
+				return {
+					ssr: {
+						// Always bundle Astro runtime when building for SSR
+						noExternal: ['astro'],
+						// Except for these packages as they're not bundle-friendly. Users with strict package installations
+						// need to manually install these themselves if they use the related features.
+						external: [
+							'sharp', // For sharp image service
+						],
+					},
+				};
 			}
 		},
 
@@ -53,7 +44,7 @@ export function vitePluginInternals(input: Set<string>, internals: BuildInternal
 				if (chunk.type === 'chunk' && chunk.facadeModuleId) {
 					const specifiers = mapping.get(chunk.facadeModuleId) || new Set([chunk.facadeModuleId]);
 					for (const specifier of specifiers) {
-						internals.entrySpecifierToBundleMap.set(specifier, chunk.fileName);
+						internals.entrySpecifierToBundleMap.set(normalizeEntryId(specifier), chunk.fileName);
 					}
 				} else if (chunk.type === 'chunk') {
 					for (const id of Object.keys(chunk.modules)) {
@@ -70,7 +61,7 @@ export function vitePluginInternals(input: Set<string>, internals: BuildInternal
 
 export function pluginInternals(internals: BuildInternals): AstroBuildPlugin {
 	return {
-		build: 'both',
+		targets: ['client', 'server'],
 		hooks: {
 			'build:before': ({ input }) => {
 				return {

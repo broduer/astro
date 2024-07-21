@@ -12,13 +12,13 @@
     "astro": "workspace:*"
   },
   "dependencies": {
-    "@webcomponents/template-shadowroot": "^0.1.0",
-    "lit": "^2.2.5",
-    "preact": "^10.7.3",
-    "react": "^18.1.0",
-    "react-dom": "^18.1.0",
-    "solid-js": "^1.4.3",
-    "svelte": "^3.48.0",
-    "vue": "^3.2.37"
+    "@webcomponents/template-shadowroot": "^0.2.1",
+    "lit": "^3.1.4",
+    "preact": "^10.22.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "solid-js": "^1.8.18",
+    "svelte": "^4.2.18",
+    "vue": "^3.4.31"
   }
 }

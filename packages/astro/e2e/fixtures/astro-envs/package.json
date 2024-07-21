@@ -1,10 +1,10 @@
 {
-  "name": "@test/astro-envs",
+  "name": "@e2e/astro-envs",
   "version": "0.0.0",
   "private": true,
   "dependencies": {
     "@astrojs/vue": "workspace:*",
     "astro": "workspace:*",
-    "vue": "^3.2.40"
+    "vue": "^3.4.31"
   }
 }

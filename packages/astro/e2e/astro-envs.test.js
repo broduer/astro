@@ -1,7 +1,20 @@
 import { expect } from '@playwright/test';
 import { testFactory } from './test-utils.js';
 
-const test = testFactory({ root: './fixtures/astro-envs/' });
+const test = testFactory({
+	root: './fixtures/astro-envs/',
+	devToolbar: {
+		enabled: false,
+	},
+	vite: {
+		optimizeDeps: {
+			// Vite has a bug where if you close the server too quickly, while the optimized
+			// dependencies are still held before serving, it will stall the server from closing.
+			// This will workaround it for now.
+			holdUntilCrawlEnd: false,
+		},
+	},
+});
 
 let devServer;
 
@@ -18,11 +31,11 @@ test.describe('Astro Environment BASE_URL', () => {
 		await page.goto(astro.resolveUrl('/blog/'));
 
 		const astroBaseUrl = page.locator('id=astro-base-url');
-		await expect(astroBaseUrl, 'astroBaseUrl equals to /blog/').toHaveText('/blog/');
+		await expect(astroBaseUrl, 'astroBaseUrl equals to /blog').toHaveText('/blog');
 
 		const clientComponentBaseUrl = page.locator('id=client-component-base-url');
 		await expect(clientComponentBaseUrl, 'clientComponentBaseUrl equals to /blog').toHaveText(
-			'/blog/'
+			'/blog'
 		);
 	});
 });

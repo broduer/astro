@@ -1,5 +1,7 @@
 ---
 import Counter from '../components/Counter.vue';
+import State from '../components/State.vue'
+import AsyncTest from '../components/Test.vue'
 import VueComponent from '../components/VueComponent.vue';
 
 const someProps = {
@@ -33,5 +35,7 @@ const someProps = {
 		</Counter>
 
 		<VueComponent id="client-only" client:only="vue" />
+		<AsyncTest id="client-test" client:only="vue" />
+		<State id="state" client:load />
 	</body>
 </html>

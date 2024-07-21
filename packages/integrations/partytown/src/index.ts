@@ -1,28 +1,23 @@
+import { createRequire } from 'module';
+import * as fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { PartytownConfig } from '@builder.io/partytown/integration';
 import { partytownSnippet } from '@builder.io/partytown/integration';
 import { copyLibFiles, libDirPath } from '@builder.io/partytown/utils';
-import type { AstroConfig, AstroIntegration } from 'astro';
-import * as fs from 'fs';
-import { createRequire } from 'module';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import type { AstroIntegration } from 'astro';
 import sirv from './sirv.js';
 const resolve = createRequire(import.meta.url).resolve;
 
-type PartytownOptions =
-	| {
-			config?: {
-				forward?: string[];
-				debug?: boolean;
-			};
-	  }
-	| undefined;
+export type PartytownOptions = {
+	config?: PartytownConfig;
+};
 
 function appendForwardSlash(str: string) {
 	return str.endsWith('/') ? str : str + '/';
 }
 
-export default function createPlugin(options: PartytownOptions): AstroIntegration {
-	let config: AstroConfig;
+export default function createPlugin(options?: PartytownOptions): AstroIntegration {
 	let partytownSnippetHtml: string;
 	const partytownEntrypoint = resolve('@builder.io/partytown/package.json');
 	const partytownLibDirectory = path.resolve(partytownEntrypoint, '../lib');
@@ -31,13 +26,15 @@ export default function createPlugin(options: PartytownOptions): AstroIntegratio
 		hooks: {
 			'astro:config:setup': ({ config: _config, command, injectScript }) => {
 				const lib = `${appendForwardSlash(_config.base)}~partytown/`;
-				const forward = options?.config?.forward || [];
-				const debug = options?.config?.debug || command === 'dev';
-				partytownSnippetHtml = partytownSnippet({ lib, debug, forward });
+				const recreateIFrameScript = `;(e=>{e.addEventListener("astro:before-swap",e=>{let r=document.body.querySelector("iframe[src*='${lib}']");e.newDocument.body.append(r)})})(document);`;
+				const partytownConfig = {
+					lib,
+					...options?.config,
+					debug: options?.config?.debug ?? command === 'dev',
+				};
+				partytownSnippetHtml = partytownSnippet(partytownConfig);
+				partytownSnippetHtml += recreateIFrameScript;
 				injectScript('head-inline', partytownSnippetHtml);
-			},
-			'astro:config:done': ({ config: _config }) => {
-				config = _config;
 			},
 			'astro:server:setup': ({ server }) => {
 				const lib = `/~partytown/`;
@@ -52,7 +49,7 @@ export default function createPlugin(options: PartytownOptions): AstroIntegratio
 			},
 			'astro:build:done': async ({ dir }) => {
 				await copyLibFiles(fileURLToPath(new URL('~partytown', dir)), {
-					debugDir: false,
+					debugDir: options?.config?.debug ?? false,
 				});
 			},
 			'astro:build:ssr': async ({ manifest }) => {

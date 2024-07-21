@@ -7,16 +7,10 @@ async function polyfill() {
 	});
 }
 
-const polyfillCheckEl = new DOMParser()
-	.parseFromString(
-		`<p><template shadowroot="open" shadowrootmode="open"></template></p>`,
-		'text/html',
-		{
-			includeShadowRoots: true,
-		}
-	)
-	.querySelector('p');
+const polyfillCheckEl = Document.parseHTMLUnsafe(
+	`<p><template shadowrootmode="open"></template></p>`
+).querySelector('p');
 
-if (!polyfillCheckEl || !polyfillCheckEl.shadowRoot) {
+if (!polyfillCheckEl?.shadowRoot) {
 	polyfill();
 }

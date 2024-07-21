@@ -1,4 +1,5 @@
-import { expect } from 'chai';
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { AstroCookies } from '../../../dist/core/cookies/index.js';
 import { apply as applyPolyfill } from '../../../dist/core/polyfill.js';
 
@@ -13,11 +14,11 @@ describe('astro/src/core/cookies', () => {
 				},
 			});
 			let cookies = new AstroCookies(req);
-			expect(cookies.get('foo').value).to.equal('bar');
+			assert.equal(cookies.get('foo').value, 'bar');
 
 			cookies.delete('foo');
 			let headers = Array.from(cookies.headers());
-			expect(headers).to.have.a.lengthOf(1);
+			assert.equal(headers.length, 1);
 		});
 
 		it('calling cookies.get() after returns undefined', () => {
@@ -27,10 +28,10 @@ describe('astro/src/core/cookies', () => {
 				},
 			});
 			let cookies = new AstroCookies(req);
-			expect(cookies.get('foo').value).to.equal('bar');
+			assert.equal(cookies.get('foo').value, 'bar');
 
 			cookies.delete('foo');
-			expect(cookies.get('foo').value).to.equal(undefined);
+			assert.equal(cookies.get('foo'), undefined);
 		});
 
 		it('calling cookies.has() after returns false', () => {
@@ -40,32 +41,63 @@ describe('astro/src/core/cookies', () => {
 				},
 			});
 			let cookies = new AstroCookies(req);
-			expect(cookies.has('foo')).to.equal(true);
+			assert.equal(cookies.has('foo'), true);
 
 			cookies.delete('foo');
-			expect(cookies.has('foo')).to.equal(false);
+			assert.equal(cookies.has('foo'), false);
 		});
 
-		it('can provide a path', () => {
+		it('deletes a cookie with attributes', () => {
 			let req = new Request('http://example.com/');
 			let cookies = new AstroCookies(req);
+
 			cookies.delete('foo', {
+				domain: 'example.com',
 				path: '/subpath/',
+				priority: 'high',
+				secure: true,
+				httpOnly: true,
+				sameSite: 'strict',
 			});
+
 			let headers = Array.from(cookies.headers());
-			expect(headers).to.have.a.lengthOf(1);
-			expect(headers[0]).to.match(/Path=\/subpath\//);
+			assert.equal(headers.length, 1);
+			assert.equal(/foo=deleted/.test(headers[0]), true);
+			assert.equal(/Expires=Thu, 01 Jan 1970 00:00:00 GMT/.test(headers[0]), true);
+			assert.equal(/Domain=example.com/.test(headers[0]), true);
+			assert.equal(/Path=\/subpath\//.test(headers[0]), true);
+			assert.equal(/Priority=High/.test(headers[0]), true);
+			assert.equal(/Secure/.test(headers[0]), true);
+			assert.equal(/HttpOnly/.test(headers[0]), true);
+			assert.equal(/SameSite=Strict/.test(headers[0]), true);
 		});
 
-		it('can provide a domain', () => {
+		it('ignores expires option', () => {
 			let req = new Request('http://example.com/');
 			let cookies = new AstroCookies(req);
+
 			cookies.delete('foo', {
-				domain: '.example.com',
+				expires: new Date(),
 			});
+
 			let headers = Array.from(cookies.headers());
-			expect(headers).to.have.a.lengthOf(1);
-			expect(headers[0]).to.match(/Domain=\.example\.com/);
+			assert.equal(headers.length, 1);
+			assert.equal(/foo=deleted/.test(headers[0]), true);
+			assert.equal(/Expires=Thu, 01 Jan 1970 00:00:00 GMT/.test(headers[0]), true);
+		});
+
+		it('ignores maxAge option', () => {
+			let req = new Request('http://example.com/');
+			let cookies = new AstroCookies(req);
+
+			cookies.delete('foo', {
+				maxAge: 60,
+			});
+
+			let headers = Array.from(cookies.headers());
+			assert.equal(headers.length, 1);
+			assert.equal(/foo=deleted/.test(headers[0]), true);
+			assert.equal(/Expires=Thu, 01 Jan 1970 00:00:00 GMT/.test(headers[0]), true);
 		});
 	});
 });

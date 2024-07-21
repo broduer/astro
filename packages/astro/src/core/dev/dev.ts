@@ -1,25 +1,22 @@
-import type { AstroTelemetry } from '@astrojs/telemetry';
-import type http from 'http';
-import type { AddressInfo } from 'net';
+import fs from 'node:fs';
+import type http from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { green } from 'kleur/colors';
 import { performance } from 'perf_hooks';
-import * as vite from 'vite';
-import yargs from 'yargs-parser';
-import type { AstroSettings } from '../../@types/astro';
+import { gt, major, minor, patch } from 'semver';
+import type * as vite from 'vite';
+import type { AstroInlineConfig } from '../../@types/astro.js';
 import { attachContentServerListeners } from '../../content/index.js';
-import { info, LogOptions, warn } from '../logger/core.js';
+import { telemetry } from '../../events/index.js';
 import * as msg from '../messages.js';
+import { ensureProcessNodeEnv } from '../util.js';
 import { startContainer } from './container.js';
 import { createContainerWithAutomaticRestart } from './restart.js';
-
-export interface DevOptions {
-	configFlag: string | undefined;
-	configFlagPath: string | undefined;
-	flags: yargs.Arguments | undefined;
-	logging: LogOptions;
-	telemetry: AstroTelemetry;
-	handleConfigError: (error: Error) => void;
-	isRestart?: boolean;
-}
+import {
+	MAX_PATCH_DISTANCE,
+	fetchLatestAstroVersion,
+	shouldCheckForUpdates,
+} from './update-check.js';
 
 export interface DevServer {
 	address: AddressInfo;
@@ -28,52 +25,84 @@ export interface DevServer {
 	stop(): Promise<void>;
 }
 
-/** `astro dev` */
-export default async function dev(
-	settings: AstroSettings,
-	options: DevOptions
-): Promise<DevServer> {
+/**
+ * Runs Astro’s development server. This is a local HTTP server that doesn’t bundle assets.
+ * It uses Hot Module Replacement (HMR) to update your browser as you save changes in your editor.
+ *
+ * @experimental The JavaScript API is experimental
+ */
+export default async function dev(inlineConfig: AstroInlineConfig): Promise<DevServer> {
+	ensureProcessNodeEnv('development');
 	const devStart = performance.now();
-	await options.telemetry.record([]);
+	await telemetry.record([]);
 
 	// Create a container which sets up the Vite server.
-	const restart = await createContainerWithAutomaticRestart({
-		flags: options.flags ?? {},
-		handleConfigError: options.handleConfigError,
-		// eslint-disable-next-line no-console
-		beforeRestart: () => console.clear(),
-		params: {
-			settings,
-			root: options.flags?.root,
-			logging: options.logging,
-			isRestart: options.isRestart,
-		},
-	});
+	const restart = await createContainerWithAutomaticRestart({ inlineConfig, fs });
+	const logger = restart.container.logger;
+
+	const currentVersion = process.env.PACKAGE_VERSION ?? '0.0.0';
+	const isPrerelease = currentVersion.includes('-');
+
+	if (!isPrerelease) {
+		try {
+			// Don't await this, we don't want to block the dev server from starting
+			shouldCheckForUpdates(restart.container.settings.preferences)
+				.then(async (shouldCheck) => {
+					if (shouldCheck) {
+						const version = await fetchLatestAstroVersion(restart.container.settings.preferences);
+
+						if (gt(version, currentVersion)) {
+							// Only update the latestAstroVersion if the latest version is greater than the current version, that way we don't need to check that again
+							// whenever we check for the latest version elsewhere
+							restart.container.settings.latestAstroVersion = version;
+
+							const sameMajor = major(version) === major(currentVersion);
+							const sameMinor = minor(version) === minor(currentVersion);
+							const patchDistance = patch(version) - patch(currentVersion);
+
+							if (sameMajor && sameMinor && patchDistance < MAX_PATCH_DISTANCE) {
+								// Don't bother the user with a log if they're only a few patch versions behind
+								// We can still tell them in the dev toolbar, which has a more opt-in nature
+								return;
+							}
+
+							logger.warn(
+								'SKIP_FORMAT',
+								await msg.newVersionAvailable({
+									latestVersion: version,
+								})
+							);
+						}
+					}
+				})
+				.catch(() => {});
+		} catch (e) {
+			// Just ignore the error, we don't want to block the dev server from starting and this is just a nice-to-have feature
+		}
+	}
 
 	// Start listening to the port
 	const devServerAddressInfo = await startContainer(restart.container);
-
-	info(
-		options.logging,
-		null,
+	logger.info(
+		'SKIP_FORMAT',
 		msg.serverStart({
 			startupTime: performance.now() - devStart,
 			resolvedUrls: restart.container.viteServer.resolvedUrls || { local: [], network: [] },
-			host: settings.config.server.host,
-			base: settings.config.base,
-			isRestart: options.isRestart,
+			host: restart.container.settings.config.server.host,
+			base: restart.container.settings.config.base,
 		})
 	);
 
-	const currentVersion = process.env.PACKAGE_VERSION ?? '0.0.0';
-	if (currentVersion.includes('-')) {
-		warn(options.logging, null, msg.prerelease({ currentVersion }));
+	if (isPrerelease) {
+		logger.warn('SKIP_FORMAT', msg.prerelease({ currentVersion }));
 	}
-	if (restart.container.viteConfig.server?.fs?.strict === false) {
-		warn(options.logging, null, msg.fsStrictWarning());
+	if (restart.container.viteServer.config.server?.fs?.strict === false) {
+		logger.warn('SKIP_FORMAT', msg.fsStrictWarning());
 	}
 
 	await attachContentServerListeners(restart.container);
+
+	logger.info(null, green('watching for file changes...'));
 
 	return {
 		address: devServerAddressInfo,

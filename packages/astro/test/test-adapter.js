@@ -1,10 +1,33 @@
 import { viteID } from '../dist/core/util.js';
 
 /**
- *
- * @returns {import('../src/@types/astro').AstroIntegration}
+ * @typedef {import('../src/@types/astro.js').AstroAdapter} AstroAdapter
+ * @typedef {import('../src/@types/astro.js').AstroIntegration} AstroIntegration
+ * @typedef {import('../src/@types/astro.js').HookParameters<"astro:build:ssr">['entryPoints']} EntryPoints
+ * @typedef {import('../src/@types/astro.js').HookParameters<"astro:build:ssr">['middlewareEntryPoint']} MiddlewareEntryPoint
+ * @typedef {import('../src/@types/astro.js').HookParameters<"astro:build:done">['routes']} Routes
  */
-export default function ({ provideAddress = true, extendAdapter } = { provideAddress: true }) {
+
+/**
+ *
+ * @param {{
+ * 	provideAddress?: boolean;
+ * 	extendAdapter?: AstroAdapter;
+ * 	setEntryPoints?: (entryPoints: EntryPoints) => void;
+ * 	setMiddlewareEntryPoint?: (middlewareEntryPoint: MiddlewareEntryPoint) => void;
+ * 	setRoutes?: (routes: Routes) => void;
+ * 	env: Record<string, string | undefined>;
+ * }} param0
+ * @returns {AstroIntegration}
+ */
+export default function ({
+	provideAddress = true,
+	extendAdapter,
+	setEntryPoints,
+	setMiddlewareEntryPoint,
+	setRoutes,
+	env,
+} = {}) {
 	return {
 		name: 'my-ssr-adapter',
 		hooks: {
@@ -27,6 +50,18 @@ export default function ({ provideAddress = true, extendAdapter } = { provideAdd
 											import { App } from 'astro/app';
 											import fs from 'fs';
 
+											${
+												env
+													? `
+											await import('astro/env/setup')
+												.then(mod => mod.setGetEnv((key) => {
+													const data = ${JSON.stringify(env)};
+													return data[key];
+												}))
+												.catch(() => {});`
+													: ''
+											}
+
 											class MyApp extends App {
 												#manifest = null;
 												constructor(manifest, streaming) {
@@ -34,7 +69,7 @@ export default function ({ provideAddress = true, extendAdapter } = { provideAdd
 													this.#manifest = manifest;
 												}
 
-												async render(request, routeData) {
+												async render(request, { routeData, clientAddress, locals, addCookieHeader } = {}) {
 													const url = new URL(request.url);
 													if(this.#manifest.assets.has(url.pathname)) {
 														const filePath = new URL('../client/' + this.removeBase(url.pathname), import.meta.url);
@@ -42,11 +77,15 @@ export default function ({ provideAddress = true, extendAdapter } = { provideAdd
 														return new Response(data);
 													}
 
-													${provideAddress ? `request[Symbol.for('astro.clientAddress')] = '0.0.0.0';` : ''}
-													return super.render(request, routeData);
+													${
+														provideAddress
+															? `request[Symbol.for('astro.clientAddress')] = clientAddress ?? '0.0.0.0';`
+															: ''
+													}
+													return super.render(request, { routeData, locals, addCookieHeader });
 												}
 											}
-											
+
 											export function createExports(manifest) {
 												return {
 													manifest,
@@ -66,8 +105,25 @@ export default function ({ provideAddress = true, extendAdapter } = { provideAdd
 					name: 'my-ssr-adapter',
 					serverEntrypoint: '@my-ssr',
 					exports: ['manifest', 'createApp'],
+					supportedAstroFeatures: {
+						serverOutput: 'stable',
+						envGetSecret: 'experimental',
+					},
 					...extendAdapter,
 				});
+			},
+			'astro:build:ssr': ({ entryPoints, middlewareEntryPoint }) => {
+				if (setEntryPoints) {
+					setEntryPoints(entryPoints);
+				}
+				if (setMiddlewareEntryPoint) {
+					setMiddlewareEntryPoint(middlewareEntryPoint);
+				}
+			},
+			'astro:build:done': ({ routes }) => {
+				if (setRoutes) {
+					setRoutes(routes);
+				}
 			},
 		},
 	};

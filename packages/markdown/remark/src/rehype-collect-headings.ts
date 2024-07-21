@@ -1,7 +1,7 @@
-import { type Expression, type Super } from 'estree';
+import type { Expression, Super } from 'estree';
 import Slugger from 'github-slugger';
-import { type MdxTextExpression } from 'mdast-util-mdx-expression';
-import { type Node } from 'unist';
+import type { MdxTextExpression } from 'mdast-util-mdx-expression';
+import type { Node } from 'unist';
 import { visit } from 'unist-util-visit';
 
 import { InvalidAstroDataError, safelyGetAstroData } from './frontmatter-injection.js';
@@ -20,7 +20,7 @@ export function rehypeHeadingIds(): ReturnType<RehypePlugin> {
 			if (node.type !== 'element') return;
 			const { tagName } = node;
 			if (tagName[0] !== 'h') return;
-			const [_, level] = tagName.match(/h([0-6])/) ?? [];
+			const [, level] = tagName.match(/h([0-6])/) ?? [];
 			if (!level) return;
 			const depth = Number.parseInt(level);
 

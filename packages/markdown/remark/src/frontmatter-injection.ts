@@ -1,4 +1,4 @@
-import type { Data, VFile } from 'vfile';
+import type { VFileData as Data, VFile } from 'vfile';
 import type { MarkdownAstroData } from './types.js';
 
 function isValidAstroData(obj: unknown): obj is MarkdownAstroData {
@@ -27,15 +27,8 @@ export function safelyGetAstroData(vfileData: Data): MarkdownAstroData | Invalid
 	return astro;
 }
 
-export function toRemarkInitializeAstroData({
-	userFrontmatter,
-}: {
-	userFrontmatter: Record<string, any>;
-}) {
-	return () =>
-		function (tree: any, vfile: VFile) {
-			if (!vfile.data.astro) {
-				vfile.data.astro = { frontmatter: userFrontmatter };
-			}
-		};
+export function setVfileFrontmatter(vfile: VFile, frontmatter: Record<string, any>) {
+	vfile.data ??= {};
+	vfile.data.astro ??= {};
+	(vfile.data.astro as any).frontmatter = frontmatter;
 }

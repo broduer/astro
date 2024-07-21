@@ -1,5 +1,229 @@
 # @astrojs/preact
 
+## 3.5.1
+
+### Patch Changes
+
+- [#11464](https://github.com/withastro/astro/pull/11464) [`2cdb685`](https://github.com/withastro/astro/commit/2cdb685ce757fc9932b67b8a52b465296dbaedcd) Thanks [@rschristian](https://github.com/rschristian)! - Swap out `preact-ssr-prepass` for `renderToStringAsync` from `preact-render-to-string`
+
+## 3.5.0
+
+### Minor Changes
+
+- [#11234](https://github.com/withastro/astro/pull/11234) [`4385bf7`](https://github.com/withastro/astro/commit/4385bf7a4dc9c65bff53a30c660f7a909fcabfc9) Thanks [@ematipico](https://github.com/ematipico)! - Adds a new function called `addServerRenderer` to the Container API. Use this function to manually store renderers inside the instance of your container.
+
+  This new function should be preferred when using the Container API in environments like on-demand pages:
+
+  ```ts
+  import type { APIRoute } from 'astro';
+  import { experimental_AstroContainer } from 'astro/container';
+  import reactRenderer from '@astrojs/react/server.js';
+  import vueRenderer from '@astrojs/vue/server.js';
+  import ReactComponent from '../components/button.jsx';
+  import VueComponent from '../components/button.vue';
+
+  // MDX runtime is contained inside the Astro core
+  import mdxRenderer from 'astro/jsx/server.js';
+
+  // In case you need to import a custom renderer
+  import customRenderer from '../renderers/customRenderer.js';
+
+  export const GET: APIRoute = async (ctx) => {
+    const container = await experimental_AstroContainer.create();
+    container.addServerRenderer({ renderer: reactRenderer });
+    container.addServerRenderer({ renderer: vueRenderer });
+    container.addServerRenderer({ renderer: customRenderer });
+    // You can pass a custom name too
+    container.addServerRenderer({
+      name: 'customRenderer',
+      renderer: customRenderer,
+    });
+    const vueComponent = await container.renderToString(VueComponent);
+    return await container.renderToResponse(Component);
+  };
+  ```
+
+## 3.4.0
+
+### Minor Changes
+
+- [#11144](https://github.com/withastro/astro/pull/11144) [`803dd80`](https://github.com/withastro/astro/commit/803dd8061df02138b4928442bcb76e77dcf6f5e7) Thanks [@ematipico](https://github.com/ematipico)! - The integration now exposes a function called `getContainerRenderer`, that can be used inside the Container APIs to load the relative renderer.
+
+  ```js
+  import { experimental_AstroContainer as AstroContainer } from 'astro/container';
+  import ReactWrapper from '../src/components/ReactWrapper.astro';
+  import { loadRenderers } from 'astro:container';
+  import { getContainerRenderer } from '@astrojs/react';
+
+  test('ReactWrapper with react renderer', async () => {
+    const renderers = await loadRenderers([getContainerRenderer()]);
+    const container = await AstroContainer.create({
+      renderers,
+    });
+    const result = await container.renderToString(ReactWrapper);
+
+    expect(result).toContain('Counter');
+    expect(result).toContain('Count: <!-- -->5');
+  });
+  ```
+
+## 3.3.0
+
+### Minor Changes
+
+- [#10938](https://github.com/withastro/astro/pull/10938) [`fd508a0`](https://github.com/withastro/astro/commit/fd508a0fbb5148aafc180f1b14d3e47974777248) Thanks [@florian-lefebvre](https://github.com/florian-lefebvre)! - Adds a `devtools` option
+
+  You can enable [Preact devtools](https://preactjs.github.io/preact-devtools/) in development by setting `devtools: true` in your `preact()` integration config:
+
+  ```js
+  import { defineConfig } from 'astro/config';
+  import preact from '@astrojs/preact';
+
+  export default defineConfig({
+    integrations: [preact({ devtools: true })],
+  });
+  ```
+
+## 3.2.0
+
+### Minor Changes
+
+- [#10689](https://github.com/withastro/astro/pull/10689) [`683d51a5eecafbbfbfed3910a3f1fbf0b3531b99`](https://github.com/withastro/astro/commit/683d51a5eecafbbfbfed3910a3f1fbf0b3531b99) Thanks [@ematipico](https://github.com/ematipico)! - Deprecate support for versions of Node.js older than `v18.17.1` for Node.js 18, older than `v20.0.3` for Node.js 20, and the complete Node.js v19 release line.
+
+  This change is in line with Astro's [Node.js support policy](https://docs.astro.build/en/upgrade-astro/#support).
+
+## 3.1.2
+
+### Patch Changes
+
+- [#10585](https://github.com/withastro/astro/pull/10585) [`ad50784adc6f262fc563999e97df3a5dc9087c88`](https://github.com/withastro/astro/commit/ad50784adc6f262fc563999e97df3a5dc9087c88) Thanks [@rschristian](https://github.com/rschristian)! - Fixes (theoretical) edge case in Preact integration's JSX aliases
+
+## 3.1.1
+
+### Patch Changes
+
+- [#10200](https://github.com/withastro/astro/pull/10200) [`c692d0c66a5062937e47402dc700d41c2a5dfc5c`](https://github.com/withastro/astro/commit/c692d0c66a5062937e47402dc700d41c2a5dfc5c) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Fixes passing children to server-rendered components causing an error
+
+## 3.1.0
+
+### Minor Changes
+
+- [#9524](https://github.com/withastro/astro/pull/9524) [`0903ef90494e9c8bd0272347a0cdd51eca7f4648`](https://github.com/withastro/astro/commit/0903ef90494e9c8bd0272347a0cdd51eca7f4648) Thanks [@aleksandrjet](https://github.com/aleksandrjet)! - Allows rendering lazy components.
+
+  You can now use [lazy components](https://preactjs.com/guide/v10/switching-to-preact/#suspense-experimental) with Suspense:
+
+  ```jsx
+  import { lazy, Suspense } from 'preact/compat';
+
+  const HeavyComponent = lazy(() => import('./HeavyComponent'));
+
+  const Component = () => {
+    return (
+      <Suspense fallback={<p>Loading...</p>}>
+        <HeavyComponent foo="bar" />
+      </Suspense>
+    );
+  };
+  ```
+
+## 3.0.2
+
+### Patch Changes
+
+- [#9482](https://github.com/withastro/astro/pull/9482) [`72b26daf694b213918f02d0fcbf90ab5b7ebc31f`](https://github.com/withastro/astro/commit/72b26daf694b213918f02d0fcbf90ab5b7ebc31f) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Improves compatability with the [Qwik adapter](https://github.com/QwikDev/astro)
+
+- [#9479](https://github.com/withastro/astro/pull/9479) [`1baf0b0d3cbd0564954c2366a7278794fad6726e`](https://github.com/withastro/astro/commit/1baf0b0d3cbd0564954c2366a7278794fad6726e) Thanks [@sarah11918](https://github.com/sarah11918)! - Updates README
+
+## 3.0.1
+
+### Patch Changes
+
+- [#8737](https://github.com/withastro/astro/pull/8737) [`6f60da805`](https://github.com/withastro/astro/commit/6f60da805e0014bc50dd07bef972e91c73560c3c) Thanks [@ematipico](https://github.com/ematipico)! - Add provenance statement when publishing the library from CI
+
+## 3.0.0
+
+### Major Changes
+
+- [#8188](https://github.com/withastro/astro/pull/8188) [`d0679a666`](https://github.com/withastro/astro/commit/d0679a666f37da0fca396d42b9b32bbb25d29312) Thanks [@ematipico](https://github.com/ematipico)! - Remove support for Node 16. The lowest supported version by Astro and all integrations is now v18.14.1. As a reminder, Node 16 will be deprecated on the 11th September 2023.
+
+- [#8179](https://github.com/withastro/astro/pull/8179) [`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7) Thanks [@matthewp](https://github.com/matthewp)! - Astro 3.0 Release Candidate
+
+- [#7924](https://github.com/withastro/astro/pull/7924) [`519a1c4e8`](https://github.com/withastro/astro/commit/519a1c4e8407c7abcb8d879b67a9f4b960652cae) Thanks [@matthewp](https://github.com/matthewp)! - New `include` and `exclude` config options
+
+  The Preact integration now has new `include` and `exclude` config options. Use these if you want to use Preact alongside another JSX framework; include specifies files to be compiled for Preact and `exclude` does the opposite.
+
+### Patch Changes
+
+- [#8264](https://github.com/withastro/astro/pull/8264) [`1f58a7a1b`](https://github.com/withastro/astro/commit/1f58a7a1bea6888868b689dac94801d554319b02) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Automatically unmount islands when `astro:unmount` is fired
+
+## 3.0.0-rc.3
+
+### Patch Changes
+
+- [#8264](https://github.com/withastro/astro/pull/8264) [`1f58a7a1b`](https://github.com/withastro/astro/commit/1f58a7a1bea6888868b689dac94801d554319b02) Thanks [@natemoo-re](https://github.com/natemoo-re)! - Automatically unmount islands when `astro:unmount` is fired
+
+## 3.0.0-rc.2
+
+### Major Changes
+
+- [#8179](https://github.com/withastro/astro/pull/8179) [`6011d52d3`](https://github.com/withastro/astro/commit/6011d52d38e43c3e3d52bc3bc41a60e36061b7b7) Thanks [@matthewp](https://github.com/matthewp)! - Astro 3.0 Release Candidate
+
+## 3.0.0-beta.1
+
+### Major Changes
+
+- [#7924](https://github.com/withastro/astro/pull/7924) [`519a1c4e8`](https://github.com/withastro/astro/commit/519a1c4e8407c7abcb8d879b67a9f4b960652cae) Thanks [@matthewp](https://github.com/matthewp)! - New `include` and `exclude` config options
+
+  The Preact integration now has new `include` and `exclude` config options. Use these if you want to use Preact alongside another JSX framework; include specifies files to be compiled for Preact and `exclude` does the opposite.
+
+## 3.0.0-beta.0
+
+### Major Changes
+
+- [`1eae2e3f7`](https://github.com/withastro/astro/commit/1eae2e3f7d693c9dfe91c8ccfbe606d32bf2fb81) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Remove support for Node 16. The lowest supported version by Astro and all integrations is now v18.14.1. As a reminder, Node 16 will be deprecated on the 11th September 2023.
+
+## 2.2.2
+
+### Patch Changes
+
+- [#8007](https://github.com/withastro/astro/pull/8007) [`58b121d42`](https://github.com/withastro/astro/commit/58b121d42a9f58a5a992f0c378b036f37e9715fc) Thanks [@paperdave](https://github.com/paperdave)! - Support Bun by adjusting how `@babel/plugin-transform-react-jsx` is imported.
+
+## 2.2.1
+
+### Patch Changes
+
+- [#7196](https://github.com/withastro/astro/pull/7196) [`1c77779dd`](https://github.com/withastro/astro/commit/1c77779dd66a6db77c81ed235da076a6118decde) Thanks [@bluwy](https://github.com/bluwy)! - Fix `astro-static-slot` hydration mismatch error
+
+## 2.2.0
+
+### Minor Changes
+
+- [#7093](https://github.com/withastro/astro/pull/7093) [`3d525efc9`](https://github.com/withastro/astro/commit/3d525efc95cfb2deb5d9e04856d02965d66901c9) Thanks [@matthewp](https://github.com/matthewp)! - Prevent removal of nested slots within islands
+
+  This change introduces a new flag that renderers can add called `supportsAstroStaticSlot`. What this does is let Astro know that the render is sending `<astro-static-slot>` as placeholder values for static (non-hydrated) slots which Astro will then remove.
+
+  This change is completely backwards compatible, but fixes bugs caused by combining ssr-only and client-side framework components like so:
+
+  ```astro
+  <Component>
+    <div>
+      <Component client:load>
+        <span>Nested</span>
+      </Component>
+    </div>
+  </Component>
+  ```
+
+### Patch Changes
+
+- [#7104](https://github.com/withastro/astro/pull/7104) [`826e02890`](https://github.com/withastro/astro/commit/826e0289005f645b902375b98d5549c6a95ccafa) Thanks [@bluwy](https://github.com/bluwy)! - Specify `"files"` field to only publish necessary files
+
+## 2.1.0
+
+### Minor Changes
+
+- [#6213](https://github.com/withastro/astro/pull/6213) [`afbbc4d5b`](https://github.com/withastro/astro/commit/afbbc4d5bfafc1779bac00b41c2a1cb1c90f2808) Thanks [@Princesseuh](https://github.com/Princesseuh)! - Updated compilation settings to disable downlevelling for Node 14
+
 ## 2.0.3
 
 ### Patch Changes

@@ -6,6 +6,9 @@
     "dev": "astro dev"
   },
   "dependencies": {
-    "astro": "workspace:*"
+    "@astrojs/react": "workspace:*",
+    "astro": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

@@ -1,4 +1,5 @@
-import { expect } from 'chai';
+import assert from 'node:assert/strict';
+import { before, describe, it } from 'node:test';
 import { loadFixture } from './test-utils.js';
 
 describe('Sourcemap', async () => {
@@ -11,12 +12,12 @@ describe('Sourcemap', async () => {
 
 	it('Builds sourcemap', async () => {
 		const dir = await fixture.readdir('./_astro');
-		const counterMap = dir.find((file) => file.match(/^Counter\.\w+\.js\.map$/));
-		expect(counterMap).to.be.ok;
+		const counterMap = dir.find((file) => file.match(/^Counter\.[\w-]+\.js\.map$/));
+		assert.ok(counterMap);
 	});
 
 	it('Builds non-empty sourcemap', async () => {
-		const map = await fixture.readFile('entry.mjs.map');
-		expect(map).to.not.include('"sources":[]');
+		const map = await fixture.readFile('renderers.mjs.map');
+		assert.equal(map.includes('"sources":[]'), false);
 	});
 });

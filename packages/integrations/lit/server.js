@@ -1,5 +1,6 @@
+// Separate import from the rest so it doesn't get re-organized after other imports
 import './server-shim.js';
-import '@lit-labs/ssr/lib/render-lit-html.js';
+
 import { LitElementRenderer } from '@lit-labs/ssr/lib/lit-element-renderer.js';
 import * as parse5 from 'parse5';
 
@@ -18,10 +19,10 @@ function getCustomElementConstructor(name) {
 
 async function isLitElement(Component) {
 	const Ctr = getCustomElementConstructor(Component);
-	return !!(Ctr && Ctr._$litElement$);
+	return !!Ctr?._$litElement$;
 }
 
-async function check(Component, _props, _children) {
+async function check(Component) {
 	// Lit doesn't support getting a tagName from a Constructor at this time.
 	// So this must be a string at the moment.
 	return !!(await isLitElement(Component));
@@ -60,7 +61,12 @@ function* render(Component, attrs, slots) {
 	yield `<${tagName}${shouldDeferHydration ? ' defer-hydration' : ''}`;
 	yield* instance.renderAttributes();
 	yield `>`;
-	const shadowContents = instance.renderShadow({});
+	const shadowContents = instance.renderShadow({
+		elementRenderers: [LitElementRenderer],
+		customElementInstanceStack: [instance],
+		customElementHostStack: [instance],
+		deferHydration: false,
+	});
 	if (shadowContents !== undefined) {
 		const { mode = 'open', delegatesFocus } = instance.shadowRootOptions ?? {};
 		// `delegatesFocus` is intentionally allowed to coerce to boolean to
@@ -106,6 +112,7 @@ async function renderToStaticMarkup(Component, props, slots) {
 }
 
 export default {
+	name: '@astrojs/lit',
 	check,
 	renderToStaticMarkup,
 };
